@@ -819,45 +819,47 @@ body.menu-open .btn--nav{opacity:0;pointer-events:none;}
   font-size:clamp(2rem,6vw,3.5rem);
 }
 
-.stack{position:relative;padding:0 var(--space-3) 60vh;} /* generous bottom buffer so the LAST
-  card actually gets scroll room to lock into its sticky slot — same as every other card does —
-  before the whole locked pile releases and scrolls away together as one block */
+/* Each card sits in its own absolutely-positioned .stack__step instead of sharing one flow
+   container. A shared container makes cards release their sticky lock at DIFFERENT scrollY
+   (whichever card has the smallest sticky `top` offset holds on longest) — the last card to
+   arrive ends up the FIRST to peel off and fly away solo, over everyone else still stuck below.
+   Giving each card its own step, sized so step.top + step.height lands on the SAME target
+   scrollY for every card, makes all five release simultaneously and ride up together. */
+.stack{position:relative;height:calc((100vh - var(--nav-h) - 32px) * 5 + 500px + 60vh);padding:0 var(--space-3);}
+.stack__step{position:absolute;left:var(--space-3);right:var(--space-3);}
+.stack__step:nth-child(1){top:0;height:calc((100vh - var(--nav-h) - 32px) * 5 + 276px);}
+.stack__step:nth-child(2){top:calc(100vh - var(--nav-h) - 32px);height:calc((100vh - var(--nav-h) - 32px) * 4 + 332px);}
+.stack__step:nth-child(3){top:calc((100vh - var(--nav-h) - 32px) * 2);height:calc((100vh - var(--nav-h) - 32px) * 3 + 388px);}
+.stack__step:nth-child(4){top:calc((100vh - var(--nav-h) - 32px) * 3);height:calc((100vh - var(--nav-h) - 32px) * 2 + 444px);}
+.stack__step:nth-child(5){top:calc((100vh - var(--nav-h) - 32px) * 4);height:calc((100vh - var(--nav-h) - 32px) + 500px);}
 .stack__item{
   position:sticky;
   display:block;
   color:var(--c-black);
-  margin-top:-24px; /* force a big, generous overlap into the previous card — the corner curve
-    is well inside this margin now, so there's no scroll position or timing where the previous
-    card's box could fail to still be there backing the cutout */
+  background:transparent; /* no backing chip on any card — the corner cutout just shows whatever real card sits behind on screen */
 }
-.stack__item:nth-child(1){margin-top:0;}
-.stack__item:nth-child(1){top:var(--nav-h);}
-.stack__item:nth-child(2){top:calc(var(--nav-h) + 56px);}
-.stack__item:nth-child(3){top:calc(var(--nav-h) + 112px);}
-.stack__item:nth-child(4){top:calc(var(--nav-h) + 168px);}
-.stack__item:nth-child(5){top:calc(var(--nav-h) + 224px);}
-.stack__item{background:transparent;} /* no backing chip on any card — the corner cutout just shows whatever real card sits behind on screen */
+.stack__step:nth-child(1) .stack__item{top:var(--nav-h);}
+.stack__step:nth-child(2) .stack__item{top:calc(var(--nav-h) + 56px);}
+.stack__step:nth-child(3) .stack__item{top:calc(var(--nav-h) + 112px);}
+.stack__step:nth-child(4) .stack__item{top:calc(var(--nav-h) + 168px);}
+.stack__step:nth-child(5) .stack__item{top:calc(var(--nav-h) + 224px);}
 .stack__item--blue{color:var(--c-white);}
 .stack__item--maroon{color:var(--c-white);}
 
 .stack__shape{
   position:relative;
-  min-height:70vh; /* enough scroll room per card that the handoff reads as a slide, not a jump-cut —
-    tall enough that even a 2-line title + tags row clears the next card's rising edge before it settles */
+  min-height:calc(100vh - var(--nav-h) - 32px); /* fill the screen as much as possible;
+    grows further with page scroll if a card's content ever needs more room */
   padding:var(--space-5) var(--space-4) var(--space-6);
   overflow:hidden;
-  cursor:pointer;
   border-top-left-radius:35px; /* top corners only — a rounded bottom clashes with the next
     card's rounded top right below it (double-curve gap). The corner cutout always reveals the
     real card sitting behind it on screen — never black — thanks to the transparent backing
     plus the generous -24px overlap above */
   border-top-right-radius:35px;
-  transition:min-height .45s var(--ease-brutal);
   /* this card's REAL color lives here, not on .stack__item — set explicitly per variant below */
 }
-.stack__item.is-expanded .stack__shape{min-height:95vh;}
-.stack__expand{display:none;margin-top:var(--space-4);}
-.stack__item.is-expanded .stack__expand{display:block;}
+.stack__expand{margin-top:var(--space-4);}
 .stack__illustration{font-size:3rem;line-height:1;margin-bottom:var(--space-2);}
 .stack__more{font-size:1rem;line-height:1.6;max-width:640px;}
 .stack__item--green .stack__shape{background:var(--c-green);}
@@ -865,7 +867,7 @@ body.menu-open .btn--nav{opacity:0;pointer-events:none;}
 .stack__item--yellow .stack__shape{background:var(--c-yellow);}
 .stack__item--maroon .stack__shape{background:var(--c-maroon);}
 .stack__item--cyan .stack__shape{background:var(--c-cyan);}
-.stack__item:last-child .stack__shape{box-shadow:0 24px 50px -16px rgba(0,0,0,.5);}
+.stack__item--cyan .stack__shape{box-shadow:0 24px 50px -16px rgba(0,0,0,.5);}
 
 .stack__inner{
   max-width:1100px;
@@ -874,7 +876,9 @@ body.menu-open .btn--nav{opacity:0;pointer-events:none;}
 .stack__index{
   font-family:var(--font-mono);
   font-weight:700;
-  font-size:1rem;
+  font-size:.7rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
   opacity:.85;
   display:block;
   margin-bottom:var(--space-2);
@@ -884,18 +888,6 @@ body.menu-open .btn--nav{opacity:0;pointer-events:none;}
   overflow-wrap:break-word; /* long words ("INMOBILIARIO") must not overflow the card on narrow screens */
 }
 .stack__cta{margin-top:var(--space-4);}
-.stack__more-hint{
-  position:absolute;
-  right:var(--space-4);
-  bottom:var(--space-3);
-  font-family:var(--font-mono);
-  font-weight:700;
-  font-size:.8rem;
-  text-transform:uppercase;
-  letter-spacing:.03em;
-  opacity:.8;
-  pointer-events:none;
-}
 .stack__item--cyan .btn{border-color:var(--c-black);color:var(--c-black);}
 .stack__item--cyan .btn:hover{background:var(--c-black);color:var(--c-cyan);}
 
@@ -1110,18 +1102,22 @@ body.menu-open .btn--nav{opacity:0;pointer-events:none;}
 
 @media (max-width:600px){
   :root{--nav-h:64px;}
-  .stack{padding-left:var(--space-1);padding-right:var(--space-1);}
-  /* shorter min-height: 58vh desktop felt like dead-scroll on a short mobile viewport */
-  .stack__item:nth-child(1){top:calc(var(--nav-h) + 22px);}
-  .stack__item:nth-child(2){top:calc(var(--nav-h) + 44px);}
-  .stack__item:nth-child(3){top:calc(var(--nav-h) + 66px);}
-  .stack__item:nth-child(4){top:calc(var(--nav-h) + 88px);}
-  .stack__item:nth-child(5){top:calc(var(--nav-h) + 110px);}
-  .stack__shape{padding-left:var(--space-2);padding-right:var(--space-2);min-height:48vh;border-top-left-radius:18px;border-top-right-radius:18px;}
+  .stack{height:calc((100vh - var(--nav-h) - 24px) * 5 + 300px + 40vh);padding-left:var(--space-1);padding-right:var(--space-1);}
+  .stack__step{left:var(--space-1);right:var(--space-1);}
+  .stack__step:nth-child(1){height:calc((100vh - var(--nav-h) - 24px) * 5 + 212px);}
+  .stack__step:nth-child(2){top:calc(100vh - var(--nav-h) - 24px);height:calc((100vh - var(--nav-h) - 24px) * 4 + 234px);}
+  .stack__step:nth-child(3){top:calc((100vh - var(--nav-h) - 24px) * 2);height:calc((100vh - var(--nav-h) - 24px) * 3 + 256px);}
+  .stack__step:nth-child(4){top:calc((100vh - var(--nav-h) - 24px) * 3);height:calc((100vh - var(--nav-h) - 24px) * 2 + 278px);}
+  .stack__step:nth-child(5){top:calc((100vh - var(--nav-h) - 24px) * 4);height:calc((100vh - var(--nav-h) - 24px) + 300px);}
+  .stack__step:nth-child(1) .stack__item{top:calc(var(--nav-h) + 22px);}
+  .stack__step:nth-child(2) .stack__item{top:calc(var(--nav-h) + 44px);}
+  .stack__step:nth-child(3) .stack__item{top:calc(var(--nav-h) + 66px);}
+  .stack__step:nth-child(4) .stack__item{top:calc(var(--nav-h) + 88px);}
+  .stack__step:nth-child(5) .stack__item{top:calc(var(--nav-h) + 110px);}
+  .stack__shape{padding-left:var(--space-2);padding-right:var(--space-2);min-height:calc(100vh - var(--nav-h) - 24px);border-top-left-radius:18px;border-top-right-radius:18px;}
   .stack__inner h3{font-size:clamp(1.6rem,8vw,5.2rem);}
   .stack__cta{margin-top:var(--space-6);}
   .stack__cta .btn{padding:.55rem .9rem;font-size:.7rem;min-height:auto;}
   .case{padding-left:var(--space-2);padding-right:var(--space-2);}
   .footer__top{flex-direction:column;}
-}
 }

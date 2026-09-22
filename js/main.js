@@ -197,29 +197,6 @@
       if (opener) opener.focus();
     }
 
-    cards.forEach(function (card) {
-      card.addEventListener('click', function (e) {
-        if (e.target.closest('a')) return; // the real "Realiza tu consulta" link — untouched
-        card.classList.toggle('is-expanded');
-      });
-      card.addEventListener('keydown', function (e) {
-        if (e.target.closest('a')) return;
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        card.classList.toggle('is-expanded');
-      });
-    });
-
-    // scrolling away from an expanded card (either direction) collapses it back to small
-    if (typeof IntersectionObserver === 'function') {
-      var collapseObserver = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting) entry.target.classList.remove('is-expanded');
-        });
-      }, { threshold: 0 });
-      cards.forEach(function (card) { collapseObserver.observe(card); });
-    }
-
     dialog.querySelectorAll('[data-service-dialog-close]').forEach(function (el) {
       el.addEventListener('click', close);
     });
