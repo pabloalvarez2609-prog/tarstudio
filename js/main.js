@@ -14,6 +14,7 @@
 
     setupLenis();
     setupMenu();
+    setupServiceDialog();
     setupNavAutohide();
     setupToTop();
     setupReveals();
@@ -133,6 +134,102 @@
       // keep Tab inside header + menu while it's open
       var stops = [].slice.call(document.querySelectorAll('.nav a, .nav button, .menu a')).filter(function (el) {
         return el.offsetParent !== null && getComputedStyle(el).pointerEvents !== 'none';
+      });
+      if (!stops.length) return;
+      var first = stops[0], last = stops[stops.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  }
+
+  /* ---------- service cards: click (or Enter/Space, cards are tabindex=0) anywhere on a card
+     to open a shared modal with more info about that service. The real "Realiza tu consulta"
+     link on the cyan card is left alone — activating it never reaches this handler's open(). ---------- */
+  function setupServiceDialog() {
+    var dialog = document.querySelector('[data-service-dialog]');
+    var cards = document.querySelectorAll('[data-service]');
+    if (!dialog || !cards.length) return;
+
+    var VARIANTS = ['green', 'blue', 'yellow', 'maroon', 'cyan'];
+    var titleEl = dialog.querySelector('[data-service-dialog-title]');
+    var indexEl = dialog.querySelector('[data-service-dialog-index]');
+    var tagsEl = dialog.querySelector('[data-service-dialog-tags]');
+    var descEl = dialog.querySelector('[data-service-dialog-desc]');
+    var closeBtn = dialog.querySelector('.service-dialog__close');
+    var inertTargets = [document.getElementById('main'), document.querySelector('.footer'), document.querySelector('[data-nav]')];
+    var isOpen = false;
+    var opener = null;
+
+    function open(card) {
+      VARIANTS.forEach(function (v) { dialog.classList.remove('service-dialog--' + v); });
+      var variant = VARIANTS.filter(function (v) { return card.classList.contains('stack__item--' + v); })[0];
+      if (variant) dialog.classList.add('service-dialog--' + variant);
+
+      titleEl.textContent = card.querySelector('h3').textContent;
+      indexEl.textContent = card.querySelector('.stack__index').textContent;
+      tagsEl.innerHTML = card.querySelector('.tags').innerHTML;
+      // the source spans carry GSAP's inline opacity/transform from the scroll-reveal animation —
+      // strip it so the clone always shows at full opacity in its own dialog, regardless of
+      // whether the card behind it has already played its reveal
+      tagsEl.querySelectorAll('span').forEach(function (s) { s.removeAttribute('style'); });
+      descEl.textContent = card.querySelector('.stack__more').textContent;
+
+      opener = card;
+      isOpen = true;
+      var rect = card.getBoundingClientRect();
+      dialog.style.transformOrigin = (rect.left + rect.width / 2) + 'px ' + (rect.top + rect.height / 2) + 'px';
+      dialog.classList.add('is-open');
+      dialog.inert = false;
+      inertTargets.forEach(function (el) { if (el) el.inert = true; });
+      document.body.style.overflow = 'hidden';
+      if (lenis) lenis.stop();
+      window.setTimeout(function () { closeBtn.focus(); }, 60);
+    }
+
+    function close() {
+      if (!isOpen) return;
+      isOpen = false;
+      dialog.classList.remove('is-open');
+      dialog.inert = true;
+      inertTargets.forEach(function (el) { if (el) el.inert = false; });
+      document.body.style.overflow = '';
+      if (lenis) lenis.start();
+      if (opener) opener.focus();
+    }
+
+    cards.forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('a')) return; // the real "Realiza tu consulta" link — untouched
+        card.classList.toggle('is-expanded');
+      });
+      card.addEventListener('keydown', function (e) {
+        if (e.target.closest('a')) return;
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        card.classList.toggle('is-expanded');
+      });
+    });
+
+    // scrolling away from an expanded card (either direction) collapses it back to small
+    if (typeof IntersectionObserver === 'function') {
+      var collapseObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) entry.target.classList.remove('is-expanded');
+        });
+      }, { threshold: 0 });
+      cards.forEach(function (card) { collapseObserver.observe(card); });
+    }
+
+    dialog.querySelectorAll('[data-service-dialog-close]').forEach(function (el) {
+      el.addEventListener('click', close);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (!isOpen) return;
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key !== 'Tab') return;
+      var stops = [].slice.call(dialog.querySelectorAll('a, button')).filter(function (el) {
+        return el.offsetParent !== null;
       });
       if (!stops.length) return;
       var first = stops[0], last = stops[stops.length - 1];
