@@ -733,35 +733,22 @@ body.menu-open .btn--nav{opacity:0;pointer-events:none;}
   font-size:clamp(2rem,6vw,3.5rem);
 }
 
-.stack{position:relative;padding:0 var(--space-3) var(--space-6);}
+.stack{position:relative;}
 .stack__item{
   position:sticky;
-  display:block;
+  top:0;
+  min-height:100svh;
+  display:flex;
+  align-items:center;
   color:var(--c-black);
-  /* plain square, solid color, NO radius here — this is what a rounded corner on .stack__shape
-     (below) ends up revealing once it cuts a corner away, so that corner is always this same
-     solid color, never the black page behind everything */
+  padding:calc(var(--nav-h) + var(--space-4)) var(--space-3) var(--space-5);
+  border-top:2px solid var(--c-black);
 }
-.stack__item:nth-child(1){top:var(--nav-h);}
-.stack__item:nth-child(2){top:calc(var(--nav-h) + 20px);}
-.stack__item:nth-child(3){top:calc(var(--nav-h) + 40px);}
-.stack__item:nth-child(4){top:calc(var(--nav-h) + 60px);}
-.stack__item:nth-child(5){top:calc(var(--nav-h) + 80px);}
 .stack__item--green{background:var(--c-green);}
 .stack__item--blue{background:var(--c-blue);}
 .stack__item--yellow{background:var(--c-yellow);}
 .stack__item--maroon{background:var(--c-maroon);color:var(--c-white);}
 .stack__item--cyan{background:var(--c-cyan);}
-
-.stack__shape{
-  min-height:58vh; /* enough scroll room per card that the handoff reads as a slide, not a jump-cut */
-  padding:var(--space-5) var(--space-4) var(--space-6);
-  overflow:hidden;
-  border-top-left-radius:28px;
-  border-top-right-radius:28px;
-  background-color:inherit; /* same solid color as .stack__item itself — the rounded cut always shows this, not black */
-}
-.stack__item:last-child .stack__shape{border-bottom-left-radius:28px;border-bottom-right-radius:28px;box-shadow:0 24px 50px -16px rgba(0,0,0,.5);}
 
 .stack__inner{
   max-width:1100px;
@@ -777,7 +764,6 @@ body.menu-open .btn--nav{opacity:0;pointer-events:none;}
 }
 .stack__inner h3{
   font-size:clamp(2.6rem,9vw,6rem);
-  overflow-wrap:break-word; /* long words ("INMOBILIARIO") must not overflow the card on narrow screens */
 }
 .stack__cta{margin-top:var(--space-4);}
 .stack__item--cyan .btn{border-color:var(--c-black);color:var(--c-black);}
@@ -994,16 +980,7 @@ body.menu-open .btn--nav{opacity:0;pointer-events:none;}
 
 @media (max-width:600px){
   :root{--nav-h:64px;}
-  .stack{padding-left:var(--space-1);padding-right:var(--space-1);} /* 24px side gutter reads huge on a narrow phone */
-  /* shorter min-height: 58vh desktop felt like dead-scroll on a short mobile viewport */
-  .stack__item:nth-child(1){top:calc(var(--nav-h) + 8px);}
-  .stack__item:nth-child(2){top:calc(var(--nav-h) + 16px);}
-  .stack__item:nth-child(3){top:calc(var(--nav-h) + 24px);}
-  .stack__item:nth-child(4){top:calc(var(--nav-h) + 32px);}
-  .stack__item:nth-child(5){top:calc(var(--nav-h) + 40px);}
-  .stack__shape{padding-left:var(--space-2);padding-right:var(--space-2);min-height:48vh;border-top-left-radius:20px;border-top-right-radius:20px;}
-  .stack__item:last-child .stack__shape{border-bottom-left-radius:20px;border-bottom-right-radius:20px;}
-  .stack__inner h3{font-size:clamp(1.9rem,10vw,6rem);}
+  .stack__item{padding-left:var(--space-2);padding-right:var(--space-2);}
   .case{padding-left:var(--space-2);padding-right:var(--space-2);}
   .footer__top{flex-direction:column;}
 }
