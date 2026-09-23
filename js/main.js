@@ -24,8 +24,131 @@
     setupMetalText();
     setupHeroTrail();
     setupAnchorScroll();
+    setupFloatingLogos();
     whenLoaderDone(setupHeroIntro);
   });
+
+  /* ---------- logos that drift freely inside their stage and can be dragged around ---------- */
+  function setupFloatingLogos() {
+    var stages = document.querySelectorAll('[data-float-stage]');
+    if (!stages.length) return;
+
+    stages.forEach(function (stage) {
+      var item = stage.querySelector('[data-float-item]');
+      if (!item) return;
+
+      var DRIFT_SPEED = 0.16; // fixed speed everything settles back to — never inherits drag/throw speed
+      var ROT_SPEED = 0.35; // deg per frame, constant spin
+
+      var sw = 0, sh = 0, iw = 0, ih = 0;
+      var x = 0, y = 0, vx = 0, vy = 0, rotation = 0;
+      var dragging = false, dragOffsetX = 0, dragOffsetY = 0;
+      var lastX = 0, lastY = 0, lastTime = 0;
+
+      function measure() {
+        sw = stage.clientWidth;
+        sh = stage.clientHeight;
+        iw = item.offsetWidth;
+        ih = item.offsetHeight;
+      }
+
+      function randomVelocity() {
+        var angle = Math.random() * Math.PI * 2;
+        return { vx: Math.cos(angle) * DRIFT_SPEED, vy: Math.sin(angle) * DRIFT_SPEED };
+      }
+
+      function apply() {
+        if (!isFinite(x) || !isFinite(y)) { x = 0; y = 0; }
+        item.style.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + rotation.toFixed(2) + 'deg)';
+      }
+
+      measure();
+      x = Math.random() * Math.max(sw - iw, 0);
+      y = Math.random() * Math.max(sh - ih, 0);
+      var v0 = randomVelocity();
+      vx = v0.vx; vy = v0.vy;
+      apply();
+
+      var BRAKE = 0.03; // how fast speed eases back to DRIFT_SPEED after being thrown — lower = slower brake
+
+      function tick() {
+        if (!reduceMotion) {
+          rotation = (rotation + ROT_SPEED) % 360;
+          if (!dragging) {
+            var mag = Math.sqrt(vx * vx + vy * vy);
+            if (mag < 0.001) {
+              var v = randomVelocity();
+              vx = v.vx; vy = v.vy;
+            } else {
+              var newMag = mag + (DRIFT_SPEED - mag) * BRAKE;
+              vx = (vx / mag) * newMag;
+              vy = (vy / mag) * newMag;
+            }
+            x += vx;
+            y += vy;
+            var maxX = Math.max(sw - iw, 0), maxY = Math.max(sh - ih, 0);
+            if (x <= 0) { x = 0; vx = Math.abs(vx); }
+            else if (x >= maxX) { x = maxX; vx = -Math.abs(vx); }
+            if (y <= 0) { y = 0; vy = Math.abs(vy); }
+            else if (y >= maxY) { y = maxY; vy = -Math.abs(vy); }
+          }
+          apply();
+        }
+        requestAnimationFrame(tick);
+      }
+
+      item.addEventListener('pointerdown', function (e) {
+        dragging = true;
+        item.classList.add('is-dragging');
+        try { item.setPointerCapture(e.pointerId); } catch (err) { /* not a real active pointer — drag still works via document-level move */ }
+        var rect = stage.getBoundingClientRect();
+        dragOffsetX = e.clientX - rect.left - x;
+        dragOffsetY = e.clientY - rect.top - y;
+        lastX = e.clientX; lastY = e.clientY; lastTime = performance.now();
+        vx = 0; vy = 0;
+      });
+
+      item.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        var rect = stage.getBoundingClientRect();
+        var maxX = Math.max(sw - iw, 0), maxY = Math.max(sh - ih, 0);
+        x = Math.min(maxX, Math.max(0, e.clientX - rect.left - dragOffsetX));
+        y = Math.min(maxY, Math.max(0, e.clientY - rect.top - dragOffsetY));
+        var now = performance.now();
+        var dt = Math.max(now - lastTime, 1);
+        vx = (e.clientX - lastX) / dt * 16;
+        vy = (e.clientY - lastY) / dt * 16;
+        lastX = e.clientX; lastY = e.clientY; lastTime = now;
+        apply();
+      });
+
+      function endDrag() {
+        if (!dragging) return;
+        dragging = false;
+        item.classList.remove('is-dragging');
+        // keep the throw's speed and direction — tick() eases it back down to DRIFT_SPEED
+        // gradually every frame, just cap it so a huge flick doesn't teleport it
+        var mag = Math.sqrt(vx * vx + vy * vy);
+        var MAX_THROW = 8;
+        if (mag > MAX_THROW) {
+          vx = (vx / mag) * MAX_THROW;
+          vy = (vy / mag) * MAX_THROW;
+        }
+      }
+      item.addEventListener('pointerup', endDrag);
+      item.addEventListener('pointercancel', endDrag);
+
+      window.addEventListener('resize', function () {
+        measure();
+        var maxX = Math.max(sw - iw, 0), maxY = Math.max(sh - ih, 0);
+        x = maxX ? Math.min(x, maxX) : 0;
+        y = maxY ? Math.min(y, maxY) : 0;
+        apply();
+      });
+
+      requestAnimationFrame(tick);
+    });
+  }
 
   /* ---------- run cb once the loading screen (js/loader.js) is gone ---------- */
   function whenLoaderDone(cb) {
